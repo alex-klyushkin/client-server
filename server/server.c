@@ -29,6 +29,7 @@
 #define SERVER_SLEEP_TIME			1									/* 1 second */
 #define THREAD_WAIT_TIME			1   								/* 1 second */
 #define SERVER_TRY_COUNT			3
+#define SERVER_FIND_DESC_PAUSE		3000								/* 3000 microseconds */
 
 
 #define	SERVER_NEED_RESTART			1
@@ -272,17 +273,17 @@ static int serverMonitor()
 
 						case SERVER_START_FAILED:
 							cycle = 0;
-							syslog(LOG_INFO, "[monitor] server start failed\n");
+							syslog(LOG_ERR, "[monitor] server start failed\n");
 							break;
 
 						case SERVER_RELOAD_CONF_FAILED:
 							cycle = 0;
-							syslog(LOG_INFO, "[monitor] server reload configuration failed\n");
+							syslog(LOG_ERR, "[monitor] server reload configuration failed\n");
 							break;
 
 						default:
 							cycle = 0;
-							syslog(LOG_WARNING, "[monitor] unknown server exit value\n");
+							syslog(LOG_ERR, "[monitor] unknown server exit value\n");
 							break;
 					}
 				}
@@ -303,7 +304,7 @@ static int serverMonitor()
 		}
 	}
 
-	syslog(LOG_ERR, "[monitor] stop\n");
+	syslog(LOG_INFO, "[monitor] stop\n");
 
 	unlink(SERVER_PID_FILE);
 
@@ -352,7 +353,7 @@ static int setPidFile(const char* pidFileName)
 
 			if(!kill(oldPid, 0))
 			{
-				syslog(LOG_ERR, "[monitor] server monitor already exists\n");
+				syslog(LOG_WARNING, "[monitor] server monitor already exists\n");
 				res = -1;
 			}
 			else
@@ -367,7 +368,7 @@ static int setPidFile(const char* pidFileName)
 					sprintf(buf, "%u", getpid());
 					if (write(pidFile, buf, strlen(buf)) != strlen(buf))
 					{
-						syslog(LOG_ERR, "[monitor] can't write pid of server monitor to  pid file\n");
+						syslog(LOG_ERR, "[monitor] can't write pid of server monitor to pidfile\n");
 						res = -1;
 					}
 				}
@@ -464,12 +465,12 @@ static int startServer()
 		{
 			sigwait(&sigset, &signo);
 
-			syslog(LOG_ERR, "[server] receive signal #%d\n", signo);
+			syslog(LOG_INFO, "[server] receive signal #%d\n", signo);
 
 			/*  reload config */
 			if(SIGUSR1 == signo)
 			{
-				syslog(LOG_ERR, "[server] from SIGUSR1 branch\n");
+				syslog(LOG_DEBUG, "[server] from SIGUSR1 branch\n");
 				res =  reloadConfig();
 
 				if (SERVER_NO_NEED_RESTART == res)
@@ -495,16 +496,15 @@ static int startServer()
 		}
 
 		/* stop all threads */
-		pthread_cancel(mainWorkThread);
+	    pthread_cancel(mainWorkThread);
 	    waitAllThreadsComplit(clientThreads);
 	}
 	else
 	{
-		syslog(LOG_ERR, "[server] create first thread failed\n");
+		syslog(LOG_ERR, "[server] creating first thread is failed\n");
 		res = SERVER_START_FAILED;
 	}
 
-	syslog(LOG_DEBUG, "[server] before return\n");
 	closelog();
 	close(listenSock);
 
@@ -627,7 +627,7 @@ static int getListeningSocket(int ipAddr, short tcpPort)
     addr.sin_port = tcpPort;
     addr.sin_addr.s_addr = ipAddr;
     
-    syslog(LOG_ERR, "[server] tcpPort 0x%4x, ipaddr 0x%08x\n", tcpPort, ipAddr);
+    syslog(LOG_INFO, "[server] tcpPort 0x%4x, ipaddr 0x%08x\n", tcpPort, ipAddr);
 
     if(bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
     {
@@ -859,7 +859,7 @@ static void servClient(void* param)
             }
             
             free(buff);
-            syslog(LOG_ERR, "[server] free() %d bytes\n", size);
+            syslog(LOG_DEBUG, "[server] free() %d bytes\n", size);
         }
     }
 
@@ -898,12 +898,12 @@ static int findFreeThreadDescriptor(int count, THREAD_INFO* tInf)
         {
             if(pthread_tryjoin_np(tInf[i].thrDesc, NULL) == 0)
             {
-                syslog(LOG_INFO, "[server_main_thread] Find free pthread_t descriptor %d\n", count);
+                syslog(LOG_DEBUG, "[server_main_thread] Find free pthread_t descriptor %d\n", count);
                 return i;
             }
         }
         
-        usleep(3000);
+        usleep(SERVER_FIND_DESC_PAUSE);
         count = 0;
     }
     
@@ -960,6 +960,7 @@ static void signalError(int sig, siginfo_t *si, void* ptr)
 	if(errorMsg)
 	{
 		int i;
+		
 		syslog(LOG_ERR, "[server] backtrace start\n");
 
 		for(i = 1; i < traceSize; i++)
