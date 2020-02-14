@@ -26,22 +26,22 @@
 /*********************************************************************************************************************/
 
 #define SERVER_PID_FILE				"/var/run/testServerMonitor.pid"
-#define SERVER_SLEEP_TIME			1									/* 1 second */
+#define SERVER_SLEEP_TIME			1								/* 1 second */
 #define THREAD_WAIT_TIME			1   								/* 1 second */
 #define SERVER_TRY_COUNT			3
-#define SERVER_FIND_DESC_PAUSE		3000								/* 3000 microseconds */
+#define SERVER_FIND_DESC_PAUSE			3000								/* 3000 microseconds */
 
 
 #define	SERVER_NEED_RESTART			1
-#define SERVER_NO_NEED_RESTART 		0
+#define SERVER_NO_NEED_RESTART 			0
 #define SERVER_START_FAILED			(-1)
-#define SERVER_RELOAD_CONF_FAILED	(-2)
-#define SERVER_CONFIG_FILE_FAILED	(-3)
+#define SERVER_RELOAD_CONF_FAILED		(-2)
+#define SERVER_CONFIG_FILE_FAILED		(-3)
 
 
 #define SERVER_DEFAULT_PORT			59000
-#define SERVER_DEFAULT_IPADDR		0
-#define SERVER_DEFAULT_CLIENT_COUNT	1024
+#define SERVER_DEFAULT_IPADDR			0
+#define SERVER_DEFAULT_CLIENT_COUNT		1024
 
 /*********************************************************************************************************************/
 
@@ -547,7 +547,7 @@ static int reloadConfig()
 	/* waitAllThreadsComplit() must be called with old value of maxClientCount */
 	newClientCount = maxClientCount;
 	maxClientCount = clientCount;
-    waitAllThreadsComplit(clientThreads);
+    	waitAllThreadsComplit(clientThreads);
 	maxClientCount = newClientCount;
 
 	/*clientThreads = realloc((void*)clientThreads, maxClientCount * sizeof(THREAD_INFO));*/
@@ -600,7 +600,6 @@ static int setFdLimit(int maxFd)
 	{
 		curLim.rlim_cur = maxFd;
 		curLim.rlim_max = maxFd;
-
 		res = setrlimit(RLIMIT_NOFILE, &curLim);
 	}
 
@@ -615,36 +614,36 @@ static int getListeningSocket(int ipAddr, short tcpPort)
 	struct sockaddr_in addr;
 	int sock;
 
-    /* open socket */
-    if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        syslog(LOG_ERR, "[server] Can't open socket\n");
-        return -1;
-    }
-    
-    /* bind socket */
-    addr.sin_family = AF_INET;
-    addr.sin_port = tcpPort;
-    addr.sin_addr.s_addr = ipAddr;
-    
-    syslog(LOG_INFO, "[server] tcpPort 0x%4x, ipaddr 0x%08x\n", tcpPort, ipAddr);
+	/* open socket */
+	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	{
+		syslog(LOG_ERR, "[server] Can't open socket\n");
+		return -1;
+	}
 
-    if(bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
-    {
-        syslog(LOG_ERR, "[server] Can't bind socket\n");
-        close(sock);
-        return -1;
-    }
-    
-    /* listen of the socket */
-    if(listen(sock, maxClientCount) < 0)
-    {
-        syslog(LOG_ERR, "[server] listen error %d\n", errno);
-        close(sock);
-        return -1;
-    }
+	/* bind socket */
+	addr.sin_family = AF_INET;
+	addr.sin_port = tcpPort;
+	addr.sin_addr.s_addr = ipAddr;
 
-    return sock;
+	syslog(LOG_INFO, "[server] tcpPort 0x%4x, ipaddr 0x%08x\n", tcpPort, ipAddr);
+
+	if(bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+	{
+		syslog(LOG_ERR, "[server] Can't bind socket\n");
+		close(sock);
+		return -1;
+	}
+
+	/* listen of the socket */
+	if(listen(sock, maxClientCount) < 0)
+	{
+		syslog(LOG_ERR, "[server] listen error %d\n", errno);
+		close(sock);
+		return -1;
+	}
+
+	return sock;
 }
 
 
@@ -697,20 +696,20 @@ static int serverProc(int* listSock)
         }  
         else
         {
-			clientInfo[counter].addr = addr.sin_addr.s_addr;
-			int status = pthread_create(&clientThreads[counter].thrDesc, NULL, (void*)servClient, (void*)&clientInfo[counter]);
+		clientInfo[counter].addr = addr.sin_addr.s_addr;
+		int status = pthread_create(&clientThreads[counter].thrDesc, NULL, (void*)servClient, (void*)&clientInfo[counter]);
 
-			if (!status)
-			{
-				syslog(LOG_INFO, "[server_main_thread] New thread create\n");
-				clientThreads[counter].inUse = 1;
-			}
-			else
-			{
-				syslog(LOG_ERR, "[server_main_thread] Can't create new thread\n");
-				clientThreads[counter].inUse = 0;
-				close(clientInfo[counter].sock);
-			}
+		if (!status)
+		{
+			syslog(LOG_INFO, "[server_main_thread] New thread create\n");
+			clientThreads[counter].inUse = 1;
+		}
+		else
+		{
+			syslog(LOG_ERR, "[server_main_thread] Can't create new thread\n");
+			clientThreads[counter].inUse = 0;
+			close(clientInfo[counter].sock);
+		}
         }
     }
 
@@ -976,9 +975,9 @@ static void signalError(int sig, siginfo_t *si, void* ptr)
 	/* stop all threads */
 	close(listenSock);
 	pthread_kill(mainWorkThread, SIGKILL);
-    waitAllThreadsComplit(clientThreads);
+    	waitAllThreadsComplit(clientThreads);
 
-    /* free memory */
+    	/* free memory */
 	if (NULL != clientInfo)
 	{
 		free(clientInfo);
